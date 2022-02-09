@@ -149,9 +149,12 @@ module.exports = {
       getDimensions,
       generateThumbnail,
       generateResponsiveFormats,
+      generateWebp,
     } = strapi.plugins.upload.services['image-manipulation'];
 
-    await strapi.plugins.upload.provider.upload(fileData);
+    const originalWebp = await generateWebp(fileData);
+
+    await strapi.plugins.upload.provider.upload(originalWebp);
 
     const thumbnailFile = await generateThumbnail(fileData);
     if (thumbnailFile) {
@@ -175,6 +178,12 @@ module.exports = {
     }
 
     const { width, height } = await getDimensions(fileData.buffer);
+
+    fileData.name=originalWebp.name;
+    fileData.ext=originalWebp.ext;
+    fileData.mime=originalWebp.mime;
+    fileData.size=originalWebp.size;
+    fileData.url=originalWebp.url;
 
     delete fileData.buffer;
 

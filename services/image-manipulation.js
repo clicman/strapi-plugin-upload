@@ -37,16 +37,17 @@ const generateThumbnail = async file => {
   const { width, height } = await getDimensions(file.buffer);
 
   if (width > THUMBNAIL_RESIZE_OPTIONS.width || height > THUMBNAIL_RESIZE_OPTIONS.height) {
-    const newBuff = await resizeTo(file.buffer, THUMBNAIL_RESIZE_OPTIONS);
+    let newBuff = await resizeTo(file.buffer, THUMBNAIL_RESIZE_OPTIONS);
 
     if (newBuff) {
+      newBuff = await sharp(newBuff).webp({quality: 80}).toBuffer();
       const { width, height, size } = await getMetadatas(newBuff);
 
       return {
-        name: `thumbnail_${file.name}`,
+        name: `thumbnail_${file.name.replace('.png', '.webp')}`,
         hash: `thumbnail_${file.hash}`,
-        ext: file.ext,
-        mime: file.mime,
+        ext: '.webp',
+        mime: 'image/webp',
         width,
         height,
         size: bytesToKbytes(size),
@@ -59,15 +60,32 @@ const generateThumbnail = async file => {
   return null;
 };
 
+const generateWebp = async file => {
+  if (!(await canBeProccessed(file.buffer))) {
+    return null;
+  }
+
+  const newBuff = await sharp(file.buffer).webp({quality: 80}).toBuffer();
+  const { width, height, size } = await getMetadatas(newBuff);
+
+  return {
+    name: `${file.name.replace('.png', '.webp')}`,
+    hash: `${file.hash}`,
+    ext: '.webp',
+    mime: 'image/webp',
+    width,
+    height,
+    size: bytesToKbytes(size),
+    buffer: newBuff,
+    path: file.path ? file.path : null,
+  };
+};
+
 const optimize = async buffer => {
   const {
     sizeOptimization = false,
     autoOrientation = false,
   } = await strapi.plugins.upload.services.upload.getSettings();
-
-  if (!sizeOptimization || !(await canBeProccessed(buffer))) {
-    return { buffer };
-  }
 
   const sharpInstance = autoOrientation ? sharp(buffer).rotate() : sharp(buffer);
 
@@ -122,22 +140,23 @@ const generateResponsiveFormats = async file => {
 };
 
 const generateBreakpoint = async (key, { file, breakpoint }) => {
-  const newBuff = await resizeTo(file.buffer, {
+  let newBuff = await resizeTo(file.buffer, {
     width: breakpoint,
     height: breakpoint,
     fit: 'inside',
   });
 
   if (newBuff) {
-    const { width, height, size } = await getMetadatas(newBuff);
+    newBuff = await sharp(newBuff).webp({quality: 80}).toBuffer();
+    const { width, height, size } = await getMetadatas(newBuff)
 
     return {
       key,
       file: {
-        name: `${key}_${file.name}`,
+        name: `${key}_${file.name.replace('.png', '.webp')}`,
         hash: `${key}_${file.hash}`,
-        ext: file.ext,
-        mime: file.mime,
+        ext: '.webp',
+        mime: 'image/webp',
         width,
         height,
         size: bytesToKbytes(size),
@@ -164,4 +183,5 @@ module.exports = {
   generateThumbnail,
   bytesToKbytes,
   optimize,
+  generateWebp,
 };
