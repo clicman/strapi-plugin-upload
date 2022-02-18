@@ -3,6 +3,9 @@
  * Image manipulation functions
  */
 const sharp = require('sharp');
+const concurrency = parseInt(process.env.SHARP_CONCURRENCY || '1');
+
+sharp.concurrency(concurrency);
 
 const { bytesToKbytes } = require('../utils/file');
 
